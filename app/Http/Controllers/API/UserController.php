@@ -171,4 +171,93 @@ class UserController extends Controller
 
         return response()->json(['message' => 'Password has been reset successfully.'], 200);
     }
+
+    public function createUser(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'name' => 'required|string|max:255',
+            'email' => 'required|string|email|max:255|unique:users,email',
+            'password' => 'required|string|min:6',
+            'user_type' => 'required|in:student,faculty', // Only 'student' or 'faculty'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        $user = User::create([
+            'name' => $request->name,
+            'email' => $request->email,
+            'password' => Hash::make($request->password),
+            'user_type' => $request->user_type,
+            'email_verified_at' => now(), // Automatically verify the user
+        ]);
+
+        return response()->json([
+            'message' => 'User created successfully.',
+            'user' => $user,
+        ], 201);
+    }
+
+    public function deleteUser($id)
+    {
+        $user = User::find($id);
+
+        if (!$user) {
+            return response()->json(['message' => 'User not found'], 404);
+        }
+
+        $user->delete();
+
+        return response()->json(['message' => 'User deleted successfully'], 200);
+    }
+
+    public function updateUser(Request $request, $id)
+    {
+        $user = User::find($id);
+
+        if (!$user) {
+            return response()->json(['message' => 'User not found'], 404);
+        }
+
+        $validated = $request->validate([
+            'name' => 'required|string',
+            'email' => 'required|email|unique:users,email,' . $id,
+            'password' => 'nullable|min:6',
+            'user_type' => 'required|in:student,faculty,admin',
+        ]);
+
+        $user->update([
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+            'password' => $validated['password'] ? Hash::make($validated['password']) : $user->password,
+            'user_type' => $validated['user_type'],
+        ]);
+
+        return response()->json(['message' => 'User updated successfully', 'user' => $user], 200);
+    }
+
+    public function getStudents()
+    {
+        $students = User::where('user_type', 'student')
+                        ->get(['id', 'name', 'email']);
+
+        return response()->json([
+            'message' => 'Student list fetched successfully',
+            'students' => $students,
+        ], 200);
+    }
+
+    public function getFaculties()
+    {
+        $faculties = User::where('user_type', 'faculty')
+                        ->get(['id', 'name', 'email']);
+
+        return response()->json([
+            'message' => 'Faculty list fetched successfully',
+            'faculties' => $faculties,
+        ], 200);
+    }
+
+    
 }
