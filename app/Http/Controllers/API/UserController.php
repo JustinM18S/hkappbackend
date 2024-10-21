@@ -13,6 +13,9 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use App\Notifications\SendVerificationCode;
+use App\Models\StudentAssignment;
+use App\Models\StudentTask;
+
 
 class UserController extends Controller
 {
@@ -259,5 +262,54 @@ class UserController extends Controller
         ], 200);
     }
 
-    
+    public function getStudentHours($student_id)
+    {
+        $student = User::findOrFail($student_id);
+
+        $assignment = StudentAssignment::where('student_id', $student_id)->first();
+
+        if (!$assignment) {
+            return response()->json(['message' => 'No assignment found for this student.'], 404);
+        }
+
+        $hkHours = [
+            'HK75' => 120,
+            'HK50' => 90,
+            'HK25' => 45,
+        ];
+
+        $totalHours = $hkHours[$assignment->hk_type] ?? 0;
+
+        $completedTasks = StudentTask::where('student_id', $student_id)
+                                    ->where('status', 'completed')
+                                    ->get();
+
+        $completedHours = $completedTasks->sum(function ($task) {
+            return $this->calculateTaskDuration($task->duty_start, $task->duty_end);
+        });
+
+        $remainingHours = max(0, $totalHours - $completedHours);
+
+        return response()->json([
+            'student_name' => $student->name,
+            'total_hours' => $totalHours,
+            'completed_hours' => $completedHours,
+            'remaining_hours' => $remainingHours,
+            'completed_tasks' => $completedTasks,
+        ], 200);
+    }
+
+    private function calculateTaskDuration($start, $end)
+    {
+        $startTime = \Carbon\Carbon::parse($start);
+        $endTime = \Carbon\Carbon::parse($end);
+
+        $totalMinutes = $endTime->diffInMinutes($startTime);
+
+        $hours = intdiv($totalMinutes, 60); 
+        $minutes = $totalMinutes % 60; 
+
+        return $hours + ($minutes / 60);
+    }
+
 }

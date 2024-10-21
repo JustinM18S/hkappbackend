@@ -75,28 +75,6 @@ class StudentAssignmentController extends Controller
         return response()->json(['message' => 'Assignment deleted successfully'], 200);
     }
 
-    public function getStudents()
-    {
-        $students = User::where('user_type', 'student')
-                        ->get(['id', 'name', 'email']);
-
-        return response()->json([
-            'message' => 'Student list fetched successfully',
-            'students' => $students,
-        ], 200);
-    }
-
-    public function getFaculties()
-    {
-        $faculties = User::where('user_type', 'faculty')
-                        ->get(['id', 'name', 'email']);
-
-        return response()->json([
-            'message' => 'Faculty list fetched successfully',
-            'faculties' => $faculties,
-        ], 200);
-    }
-
-
+    
 
 }
