@@ -4,6 +4,7 @@ namespace App\Http\Controllers\API;
 
 use App\Http\Controllers\Controller;
 use App\Models\StudentAssignment;
+use App\Models\User;
 use Illuminate\Http\Request;
 
 class StudentAssignmentController extends Controller
@@ -14,14 +15,39 @@ class StudentAssignmentController extends Controller
             'student_id' => 'required|exists:users,id',
             'faculty_id' => 'required|exists:users,id',
             'deadline' => 'required|date',
-            'hk_type' => 'required|string',
+            'hk_duty_type' => 'required|in:Internal Facilitator,External Facilitator', 
         ]);
-
-        $assignment = StudentAssignment::create($validated);
-
+    
+        $student = User::findOrFail($validated['student_id']);
+    
+        if ($student->user_type !== 'student') {
+            return response()->json(['message' => 'The provided user is not a student'], 400);
+        }
+    
+        $hkType = $student->hk_type;
+    
+        $faculty = User::findOrFail($validated['faculty_id']);
+    
+        $assignment = StudentAssignment::create([
+            'student_id' => $validated['student_id'],
+            'faculty_id' => $validated['faculty_id'],
+            'deadline' => $validated['deadline'],
+            'hk_type' => $hkType,
+            'hk_duty_type' => $validated['hk_duty_type'],
+        ]);
+    
         return response()->json([
             'message' => 'Student assigned successfully',
-            'data' => $assignment,
+            'assignment' => [
+                'student_name' => $student->name,
+                'faculty_name' => $faculty->name,
+                'deadline' => $assignment->deadline,
+                'hk_type' => $assignment->hk_type,
+                'hk_duty_type' => $assignment->hk_duty_type,
+                'created_at' => $assignment->created_at,
+                'updated_at' => $assignment->updated_at,
+                'id' => $assignment->id,
+            ],
         ], 201);
     }
 
@@ -54,7 +80,7 @@ class StudentAssignmentController extends Controller
         $validated = $request->validate([
             'faculty_id' => 'required|exists:users,id',
             'deadline' => 'required|date',
-            'hk_type' => 'required|string',
+            'hk_duty_type' => 'required|in:Internal Facilitator,External Facilitator', // Add hk_duty_type validation
         ]);
 
         $assignment->update($validated);
@@ -74,7 +100,4 @@ class StudentAssignmentController extends Controller
 
         return response()->json(['message' => 'Assignment deleted successfully'], 200);
     }
-
-    
-
 }

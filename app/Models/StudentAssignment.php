@@ -14,6 +14,7 @@ class StudentAssignment extends Model
         'faculty_id',
         'deadline',
         'hk_type',
+        'hk_duty_type',
     ];
 
     public function student()

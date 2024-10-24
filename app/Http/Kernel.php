@@ -64,9 +64,9 @@ class Kernel extends HttpKernel
         'signed' => \App\Http\Middleware\ValidateSignature::class,
         'throttle' => \Illuminate\Routing\Middleware\ThrottleRequests::class,
         'verified' => \Illuminate\Auth\Middleware\EnsureEmailIsVerified::class,
-        'admin' => \App\Http\Middleware\SyncoMW\AdminMiddleware::class,
-        'teacher' => \App\Http\Middleware\SyncoMW\TeacherMiddleware::class,
-        'student' => \App\Http\Middleware\SyncoMW\StudentMiddleware::class,
-        'manager' => \App\Http\Middleware\SyncoMW\ManagerMiddleware::class,
+        'admin' => \App\Http\Middleware\AdminMiddleware::class,
+        'faculty' => \App\Http\Middleware\FacultyMiddleware::class,
     ];
+
+
 }

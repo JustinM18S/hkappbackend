@@ -14,6 +14,7 @@ class CreateStudentAssignmentsTable extends Migration
             $table->unsignedBigInteger('faculty_id');
             $table->date('deadline');
             $table->string('hk_type'); // e.g., HK25, HK50, HK75
+            $table->enum('hk_duty_type', ['Internal Facilitator', 'External Facilitator']);
             $table->timestamps();
 
             $table->foreign('student_id')->references('id')->on('users')->onDelete('cascade');

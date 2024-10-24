@@ -18,8 +18,12 @@ class User extends Authenticatable
      */
     protected $fillable = [
         'name',
+        'student_id',
+        'faculty_id',
         'email',
         'password',
+        'user_type',
+        'hk_type',
     ];
 
     /**
@@ -44,14 +48,33 @@ class User extends Authenticatable
         ];
     }
 
-
+    /**
+     * Check if the user is an admin.
+     *
+     * @return bool
+     */
     public function isAdmin(): bool
     {
         return $this->user_type === 'admin';
     }
 
+    /**
+     * Check if the user is a faculty.
+     *
+     * @return bool
+     */
     public function isFaculty(): bool
     {
         return $this->user_type === 'faculty';
+    }
+
+    /**
+     * Check if the user is a student.
+     *
+     * @return bool
+     */
+    public function isStudent(): bool
+    {
+        return $this->user_type === 'student';
     }
 }

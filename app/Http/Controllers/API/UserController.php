@@ -61,7 +61,6 @@ class UserController extends Controller
         ], 200);
     }
 
-
     public function verifyCode(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -129,8 +128,6 @@ class UserController extends Controller
         }
 
         $token = Str::random(64);
-
-        // Delete any existing token for the email before inserting a new one
         DB::table('password_reset_tokens')->where('email', $request->email)->delete();
 
         DB::table('password_reset_tokens')->insert([
@@ -177,29 +174,115 @@ class UserController extends Controller
 
     public function createUser(Request $request)
     {
+        if (!$request->user()->isAdmin()) {
+            return response()->json(['message' => 'Access denied. Admins only.'], 403);
+        }
+
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
+            'student_id' => 'required_if:user_type,student|unique:users,student_id',
+            'faculty_id' => 'required_if:user_type,faculty|unique:users,faculty_id',
             'email' => 'required|string|email|max:255|unique:users,email',
-            'password' => 'required|string|min:6',
-            'user_type' => 'required|in:student,faculty', // Only 'student' or 'faculty'
+            'password' => 'required|string|min:6|confirmed',
+            'user_type' => 'required|in:student,faculty',
+            'hk_type' => 'required_if:user_type,student|in:HK25,HK50,HK75',
         ]);
 
         if ($validator->fails()) {
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
-        $user = User::create([
+        $userData = [
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
             'user_type' => $request->user_type,
-            'email_verified_at' => now(), // Automatically verify the user
-        ]);
+            'email_verified_at' => now(),
+        ];
+
+        if ($request->user_type === 'student') {
+            $userData['student_id'] = $request->student_id;
+            $userData['hk_type'] = $request->hk_type;
+        }
+
+        if ($request->user_type === 'faculty') {
+            $userData['faculty_id'] = $request->faculty_id;
+        }
+
+        $user = User::create($userData);
 
         return response()->json([
-            'message' => 'User created successfully.',
+            'message' => 'User created successfully',
             'user' => $user,
         ], 201);
+    }
+
+
+    public function updateUser(Request $request, $id)
+    {
+        $user = User::find($id);
+
+        if (!$user) {
+            return response()->json(['message' => 'User not found'], 404);
+        }
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'student_id' => 'required_if:user_type,student|unique:users,student_id,' . $id,
+            'faculty_id' => 'required_if:user_type,faculty|unique:users,faculty_id,' . $id,
+            'email' => 'required|string|email|max:255|unique:users,email,' . $id,
+            'password' => 'nullable|string|min:6|confirmed',
+            'user_type' => 'required|in:student,faculty,admin',
+            'hk_type' => 'required_if:user_type,student|in:HK25,HK50,HK75',
+        ]);
+
+        $userData = [
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+            'user_type' => $validated['user_type'],
+        ];
+
+        if ($user->user_type === 'student') {
+            $userData['student_id'] = $validated['student_id'];
+            $userData['hk_type'] = $validated['hk_type'];
+        }
+
+        if ($user->user_type === 'faculty') {
+            $userData['faculty_id'] = $validated['faculty_id'];
+        }
+
+        if (!empty($validated['password'])) {
+            $userData['password'] = Hash::make($validated['password']);
+        }
+
+        $user->update($userData);
+
+        return response()->json([
+            'message' => 'User updated successfully',
+            'user' => $user,
+        ], 200);
+    }
+
+    public function getStudents()
+    {
+        $students = User::where('user_type', 'student')
+            ->get(['id', 'name', 'student_id', 'email', 'hk_type']);
+
+        return response()->json([
+            'message' => 'Student list fetched successfully',
+            'students' => $students,
+        ], 200);
+    }
+
+    public function getFaculties()
+    {
+        $faculties = User::where('user_type', 'faculty')
+            ->get(['id', 'name', 'faculty_id', 'email']);
+
+        return response()->json([
+            'message' => 'Faculty list fetched successfully',
+            'faculties' => $faculties,
+        ], 200);
     }
 
     public function deleteUser($id)
@@ -215,52 +298,6 @@ class UserController extends Controller
         return response()->json(['message' => 'User deleted successfully'], 200);
     }
 
-    public function updateUser(Request $request, $id)
-    {
-        $user = User::find($id);
-
-        if (!$user) {
-            return response()->json(['message' => 'User not found'], 404);
-        }
-
-        $validated = $request->validate([
-            'name' => 'required|string',
-            'email' => 'required|email|unique:users,email,' . $id,
-            'password' => 'nullable|min:6',
-            'user_type' => 'required|in:student,faculty,admin',
-        ]);
-
-        $user->update([
-            'name' => $validated['name'],
-            'email' => $validated['email'],
-            'password' => $validated['password'] ? Hash::make($validated['password']) : $user->password,
-            'user_type' => $validated['user_type'],
-        ]);
-
-        return response()->json(['message' => 'User updated successfully', 'user' => $user], 200);
-    }
-
-    public function getStudents()
-    {
-        $students = User::where('user_type', 'student')
-                        ->get(['id', 'name', 'email']);
-
-        return response()->json([
-            'message' => 'Student list fetched successfully',
-            'students' => $students,
-        ], 200);
-    }
-
-    public function getFaculties()
-    {
-        $faculties = User::where('user_type', 'faculty')
-                        ->get(['id', 'name', 'email']);
-
-        return response()->json([
-            'message' => 'Faculty list fetched successfully',
-            'faculties' => $faculties,
-        ], 200);
-    }
 
     public function getStudentHours($student_id)
     {
@@ -311,5 +348,25 @@ class UserController extends Controller
 
         return $hours + ($minutes / 60);
     }
+
+    public function getProfile($id)
+    {
+        $user = User::findOrFail($id);
+        $assignment = StudentAssignment::where('student_id', $user->id)->first();
+
+        $profileData = [
+            'name' => $user->name,
+            'student_id' => $user->student_id,
+            'faculty_id' => $user->faculty_id,
+            'hk_type' => $user->hk_type,
+            'hk_duty_type' => $assignment ? $assignment->hk_duty_type : 'N/A',
+        ];
+
+        return response()->json([
+            'message' => 'User profile fetched successfully',
+            'profile' => $profileData,
+        ], 200);
+    }
+
 
 }
