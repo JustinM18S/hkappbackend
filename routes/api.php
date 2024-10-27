@@ -45,6 +45,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/students/{student_id}/hours', [UserController::class, 'getStudentHours']);
     Route::middleware('auth:sanctum')->get('/profile/{id}', [UserController::class, 'getProfile']);
+    Route::get('/dashboard/student/{student_id}', [UserController::class, 'getStudentDashboard']);
 
 
 });

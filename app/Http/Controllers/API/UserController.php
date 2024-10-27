@@ -303,9 +303,9 @@ class UserController extends Controller
     {
         $student = User::findOrFail($student_id);
 
-        $assignment = StudentAssignment::where('student_id', $student_id)->first();
+        $assignments = StudentAssignment::where('student_id', $student_id)->get();
 
-        if (!$assignment) {
+        if ($assignments->isEmpty()) {
             return response()->json(['message' => 'No assignment found for this student.'], 404);
         }
 
@@ -315,8 +315,7 @@ class UserController extends Controller
             'HK25' => 45,
         ];
 
-        $totalHours = $hkHours[$assignment->hk_type] ?? 0;
-
+        $totalHours = $hkHours[$assignments->first()->hk_type] ?? 0; 
         $completedTasks = StudentTask::where('student_id', $student_id)
                                     ->where('status', 'completed')
                                     ->get();
@@ -347,6 +346,43 @@ class UserController extends Controller
         $minutes = $totalMinutes % 60; 
 
         return $hours + ($minutes / 60);
+    }
+
+    public function getStudentDashboard($student_id)
+    {
+        $student = User::findOrFail($student_id);
+
+        $assignment = StudentAssignment::where('student_id', $student_id)->first();
+
+        if (!$assignment) {
+            return response()->json(['message' => 'No assignment found for this student.'], 404);
+        }
+
+        $hkHours = [
+            'HK75' => 120,
+            'HK50' => 90,
+            'HK25' => 45,
+        ];
+
+        $totalHours = $hkHours[$assignment->hk_type] ?? 0;
+
+        $tasks = StudentTask::where('student_id', $student_id)->get();
+
+        $completedHours = 0;
+        foreach ($tasks as $task) {
+            if ($task->status === 'completed') {
+                $completedHours += $this->calculateTaskDuration($task->duty_start, $task->duty_end);
+            }
+        }
+
+        $remainingHours = max(0, $totalHours - $completedHours);
+
+        return response()->json([
+            'tasks' => $tasks,
+            'total_hours' => $totalHours,
+            'completed_hours' => $completedHours,
+            'remaining_hours' => $remainingHours,
+        ], 200);
     }
 
     public function getProfile($id)

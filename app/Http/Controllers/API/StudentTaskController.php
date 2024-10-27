@@ -8,13 +8,11 @@ use Illuminate\Http\Request;
 
 class StudentTaskController extends Controller
 {
-
     public function index()
     {
         $tasks = StudentTask::all();
         return response()->json(['tasks' => $tasks], 200);
     }
-
 
     public function getStudentTasks($student_id)
     {
@@ -43,7 +41,6 @@ class StudentTaskController extends Controller
         ], 200);
     }
 
-
     public function store(Request $request)
     {
         $validatedData = $request->validate([
@@ -54,6 +51,11 @@ class StudentTaskController extends Controller
             'duty_start' => 'required|string',
             'duty_end' => 'required|string',
         ]);
+
+        $dayOfWeek = date('l', strtotime($validatedData['duty_date'])); 
+        if (!in_array($dayOfWeek, ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'])) {
+            return response()->json(['message' => 'The assigned date must be a weekday.'], 400);
+        }
 
         $task = StudentTask::create($validatedData);
 
@@ -78,4 +80,6 @@ class StudentTaskController extends Controller
             'task' => $task,
         ], 200);
     }
+
+
 }

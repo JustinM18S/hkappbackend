@@ -12,8 +12,8 @@ class CreateStudentAssignmentsTable extends Migration
             $table->id();
             $table->unsignedBigInteger('student_id');
             $table->unsignedBigInteger('faculty_id');
-            $table->date('deadline');
-            $table->string('hk_type'); // e.g., HK25, HK50, HK75
+            $table->date('assigned_date');
+            $table->string('hk_type');
             $table->enum('hk_duty_type', ['Internal Facilitator', 'External Facilitator']);
             $table->timestamps();
 
